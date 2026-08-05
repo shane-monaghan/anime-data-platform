@@ -3,3 +3,4 @@ python-dotenv
 polars
 pandas
 jupyter
+duckdb
