@@ -11,6 +11,17 @@ def bronze_ingest(
     year: int,
     season: str
 ):
+    """
+    Ingests seasonal anime data from the MyAnimeList API into a Bronze table.
+
+    Retrieves seasonal anime data for the specified year and season, serializes the
+    raw API response to JSON, and appends it to the specified Bronze table along
+    with the current ingestion timestamp.
+
+    year: The year of the seasonal anime to retrieve (e.g., 2026).
+    season: The anime season to retrieve. Expected values are
+        "winter", "spring", "summer", or "fall".
+    """
     response = client.get_seasonal_anime(year, season)
     data = response.json()
 
