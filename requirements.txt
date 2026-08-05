@@ -4,3 +4,6 @@ polars
 pandas
 jupyter
 duckdb
+duckdb-engine
+sqlalchemy
+pyarrow
