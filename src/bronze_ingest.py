@@ -4,25 +4,24 @@ import polars as pl
 from datetime import datetime
 from mal_client import MALClient
 
-def bronze_ingest(
-    client: MALClient,
-    connection: str,
-    table_name: str,
-    year: int,
-    season: str
-):
+def bronze_ingest_rankings(
+        client: MALClient,
+        connection: str,
+        table_name: str,
+        ranking_type: str,
+        limit: int
+    ) -> None:
     """
-    Ingests seasonal anime data from the MyAnimeList API into a Bronze table.
+    Ingests anime ranking data from the MyAnimeList API into a Bronze table.
 
-    Retrieves seasonal anime data for the specified year and season, serializes the
+    Retrieves anime ranking data, serializes the
     raw API response to JSON, and appends it to the specified Bronze table along
     with the current ingestion timestamp.
 
-    year: The year of the seasonal anime to retrieve (e.g., 2026).
-    season: The anime season to retrieve. Expected values are
-        "winter", "spring", "summer", or "fall".
+    ranking_type: the type of ranking requested(all, airing, etc)
+    limit: the number of anime to return (limit of 500)
     """
-    response = client.get_seasonal_anime(year, season)
+    response = client.get_rankings(ranking_type, limit)
     data = response.json()
 
     df = pl.DataFrame(
