@@ -34,3 +34,18 @@ class MALClient:
         endpoint = self.base_url + f"/season/{year}/{season}"
         response = requests.get(endpoint, headers=self.headers)
         return response
+        
+    def get_rankings(
+            self,
+            ranking_type: str,
+            limit: int
+        ) -> requests.Response:
+        """
+        Gets and returns a response from MAL's ranking endpoint.
+
+        ranking_type: the type of ranking requested(all, airing, etc)
+        limit: the number of anime to return (limit of 500)
+        """
+        endpoint = self.base_url + f"/ranking?ranking_type={ranking_type}&limit={limit}"
+        response = requests.get(endpoint, headers=self.headers)
+        return response
