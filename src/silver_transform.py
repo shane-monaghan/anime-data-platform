@@ -1,10 +1,8 @@
 import duckdb
 import polars as pl
 
-def read_bronze_data(
-        database_path: str,
-        bronze_table: str
-    ) -> list[dict]:
+
+def read_bronze_data(database_path: str, bronze_table: str) -> list[dict]:
     """
     Reads and decodes raw JSON responses from a Bronze DuckDB table.
 
@@ -23,6 +21,7 @@ def read_bronze_data(
     dict_data = bronze_df["raw_json"].str.json_decode().to_list()
     con.close()
     return dict_data
+
 
 def extract_anime_records(responses: list[dict]) -> list[dict]:
     """
@@ -43,6 +42,7 @@ def extract_anime_records(responses: list[dict]) -> list[dict]:
             all_rows.append(anime_dict)
     return all_rows
 
+
 def create_decoded_dataframe(all_rows: list[dict]) -> pl.DataFrame:
     """
     Converts nested anime records into a flattened Polars DataFrame.
@@ -57,13 +57,9 @@ def create_decoded_dataframe(all_rows: list[dict]) -> pl.DataFrame:
         Flattened DataFrame containing anime and ranking fields.
     """
     parsed_df = pl.from_dicts(all_rows)
-    parsed_df = (
-        parsed_df
-        .unnest("node")
-        .unnest("ranking")
-        .unnest("main_picture")
-    )
+    parsed_df = parsed_df.unnest("node").unnest("ranking").unnest("main_picture")
     return parsed_df
+
 
 def create_anime_dim_dataframe(parsed_df: pl.DataFrame) -> pl.DataFrame:
     """
@@ -80,6 +76,7 @@ def create_anime_dim_dataframe(parsed_df: pl.DataFrame) -> pl.DataFrame:
     anime_dim_df = parsed_df.select("id", "title")
     return anime_dim_df
 
+
 def create_fact_dataframe(parsed_df: pl.DataFrame) -> pl.DataFrame:
     """
     Creates the anime ranking fact table from parsed ranking data.
@@ -95,11 +92,12 @@ def create_fact_dataframe(parsed_df: pl.DataFrame) -> pl.DataFrame:
     fact_df = parsed_df.select("id", "rank")
     return fact_df
 
+
 def silver_transform(
-        database_path: str,
-        connection: str,
-        bronze_table: str,
-    ) -> None:
+    database_path: str,
+    connection: str,
+    bronze_table: str,
+) -> None:
     """
     Transforms Bronze API responses into Silver dimension and fact tables.
 
@@ -119,13 +117,9 @@ def silver_transform(
     fact_df = create_fact_dataframe(parsed_df)
 
     anime_dim_df.write_database(
-        table_name="dim_anime",
-        connection=connection,
-        if_table_exists="append"
+        table_name="dim_anime", connection=connection, if_table_exists="append"
     )
 
     fact_df.write_database(
-        table_name="fact_rankings",
-        connection=connection,
-        if_table_exists="append"
+        table_name="fact_rankings", connection=connection, if_table_exists="append"
     )
