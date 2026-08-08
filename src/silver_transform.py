@@ -1,8 +1,10 @@
 import duckdb
 import polars as pl
 
+from database_manager import DatabaseManager
 
-def read_bronze_data(database_path: str, bronze_table: str) -> list[dict]:
+
+def read_bronze_data(db_manager: DatabaseManager, bronze_table: str) -> list[dict]:
     """
     Reads and decodes raw JSON responses from a Bronze DuckDB table.
 
@@ -10,16 +12,15 @@ def read_bronze_data(database_path: str, bronze_table: str) -> list[dict]:
     MyAnimeList API response payloads.
 
     Args:
-        database_path: Path to the DuckDB database.
+        db_manager: A DatabaseManager instance.
         bronze_table: Name of the Bronze table to read.
 
     Returns:
         List of decoded API response dictionaries.
     """
-    con = duckdb.connect(database_path)
-    bronze_df = con.sql(f"SELECT * FROM {bronze_table}").pl()
+    query = f"SELECT * FROM {bronze_table}"
+    bronze_df = db_manager.execute(query).pl()
     dict_data = bronze_df["raw_json"].str.json_decode().to_list()
-    con.close()
     return dict_data
 
 
@@ -94,8 +95,7 @@ def create_fact_dataframe(parsed_df: pl.DataFrame) -> pl.DataFrame:
 
 
 def silver_transform(
-    database_path: str,
-    connection: str,
+    db_manager: DatabaseManager,
     bronze_table: str,
 ) -> None:
     """
@@ -105,21 +105,15 @@ def silver_transform(
     dim_anime and fact_rankings tables.
 
     Args:
-        database_path: Path to the DuckDB database.
-        connection: Database connection string for writing tables.
+        db_manager: a DatabaseManager instance
         bronze_table: Bronze table containing raw API responses.
     """
-    dict_data = read_bronze_data(database_path=database_path, bronze_table=bronze_table)
+    dict_data = read_bronze_data(db_manager=db_manager, bronze_table=bronze_table)
     all_rows = extract_anime_records(dict_data)
     parsed_df = create_decoded_dataframe(all_rows)
 
     anime_dim_df = create_anime_dim_dataframe(parsed_df)
     fact_df = create_fact_dataframe(parsed_df)
 
-    anime_dim_df.write_database(
-        table_name="dim_anime", connection=connection, if_table_exists="append"
-    )
-
-    fact_df.write_database(
-        table_name="fact_rankings", connection=connection, if_table_exists="append"
-    )
+    db_manager.write("dim_anime", anime_dim_df)
+    db_manager.write("fact_rankings", fact_df)
