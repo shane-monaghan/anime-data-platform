@@ -20,7 +20,9 @@ def read_bronze_data(db_manager: DatabaseManager, bronze_table: str) -> list[dic
 
     return [
         {"data": response, "ingested_at": timestamp}
-        for response, timestamp in zip(dict_data, bronze_df["ingested_at"].to_list())
+        for response, timestamp in zip(
+            dict_data, bronze_df["ingested_at"].to_list(), strict=True
+        )
     ]
 
 
