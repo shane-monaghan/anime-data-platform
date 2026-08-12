@@ -38,6 +38,10 @@ class DatabaseManager:
             );
         """
         exists = self.conn.execute(query, {"table_name": table_name}).fetchone()
+
+        if exists is None:
+            raise ValueError("Something went wrong with the query.")
+
         return True if exists[0] else False
 
     def create_table(self, table_name, df):
