@@ -4,18 +4,15 @@ from database_manager import DatabaseManager
 
 
 def read_bronze_data(db_manager: DatabaseManager, bronze_table: str) -> list[dict]:
-    """
-    Reads and decodes raw JSON responses from a Bronze DuckDB table.
-
-    Assumes the table contains a raw_json column containing serialized
-    MyAnimeList API response payloads.
+    """Read raw Bronze JSON responses from DuckDB and decode them.
 
     Args:
-        db_manager: A DatabaseManager instance.
-        bronze_table: Name of the Bronze table to read.
+        db_manager: DatabaseManager instance used to query DuckDB.
+        bronze_table: Name of the Bronze table containing raw JSON payloads.
 
     Returns:
-        List of decoded API response dictionaries.
+        List of decoded API response dictionaries,
+        each paired with its ingestion timestamp.
     """
     query = f"SELECT * FROM {bronze_table}"
     bronze_df = db_manager.execute(query).pl()
@@ -28,17 +25,15 @@ def read_bronze_data(db_manager: DatabaseManager, bronze_table: str) -> list[dic
 
 
 def extract_anime_records(responses: list[dict]) -> list[dict]:
-    """
-    Extracts individual anime records from MyAnimeList API responses.
-
-    Assumes each response contains a data field containing a list of
-    anime ranking records.
+    """Extract individual anime records from decoded Bronze responses.
 
     Args:
-        responses: Decoded MyAnimeList API responses.
+        responses: List of decoded Bronze records, each containing a serialized
+            MAL API response and ingestion timestamp.
 
     Returns:
-        Flattened list of anime ranking dictionaries.
+        Flat list of anime ranking dictionaries with the source ingestion timestamp
+        copied into each record.
     """
     all_rows = []
 
@@ -51,17 +46,13 @@ def extract_anime_records(responses: list[dict]) -> list[dict]:
 
 
 def create_decoded_dataframe(all_rows: list[dict]) -> pl.DataFrame:
-    """
-    Converts nested anime records into a flattened Polars DataFrame.
-
-    Assumes each record contains node, ranking, and main_picture
-    nested dictionaries from the MyAnimeList API payload.
+    """Convert flattened anime records into a Polars DataFrame.
 
     Args:
         all_rows: List of individual anime ranking records.
 
     Returns:
-        Flattened DataFrame containing anime and ranking fields.
+        Polars DataFrame with nested MAL payload fields unnested into columns.
     """
     parsed_df = pl.from_dicts(all_rows)
     parsed_df = parsed_df.unnest("node").unnest("ranking").unnest("main_picture")
@@ -69,32 +60,26 @@ def create_decoded_dataframe(all_rows: list[dict]) -> pl.DataFrame:
 
 
 def create_anime_dim_dataframe(parsed_df: pl.DataFrame) -> pl.DataFrame:
-    """
-    Creates the anime dimension table from parsed ranking data.
-
-    Extracts anime identifiers and titles.
+    """Create a dimension DataFrame for anime metadata.
 
     Args:
-        parsed_df: Flattened anime ranking DataFrame.
+        parsed_df: Flattened DataFrame containing anime ranking data.
 
     Returns:
-        DataFrame containing anime dimension records.
+        DataFrame with anime id and title columns.
     """
     anime_dim_df = parsed_df.select("id", "title")
     return anime_dim_df
 
 
 def create_fact_dataframe(parsed_df: pl.DataFrame) -> pl.DataFrame:
-    """
-    Creates the anime ranking fact table from parsed ranking data.
-
-    Extracts anime identifiers and ranking measurements.
+    """Create a fact DataFrame for anime rankings.
 
     Args:
-        parsed_df: Flattened anime ranking DataFrame.
+        parsed_df: Flattened DataFrame containing anime ranking data.
 
     Returns:
-        DataFrame containing anime ranking records.
+        DataFrame with anime id, rank, and ingestion timestamp.
     """
     fact_df = parsed_df.select("id", "rank", "ingested_at")
     return fact_df
@@ -104,15 +89,18 @@ def silver_transform(
     db_manager: DatabaseManager,
     bronze_table: str,
 ) -> None:
-    """
-    Transforms Bronze API responses into Silver dimension and fact tables.
+    """Transform Bronze ranked anime payloads into Silver tables.
 
-    Reads Bronze JSON payloads, flattens anime ranking records, and writes
-    dim_anime and fact_rankings tables.
+    Reads raw JSON ranking payloads from the specified Bronze table,
+    normalizes the nested records into a flat DataFrame, and writes the
+    resulting dimension and fact tables to DuckDB.
 
     Args:
-        db_manager: a DatabaseManager instance
-        bronze_table: Bronze table containing raw API responses.
+        db_manager: DatabaseManager instance used to query and write DuckDB tables.
+        bronze_table: Name of the Bronze table containing raw ranking payloads.
+
+    Returns:
+        None. Creates or updates dim_anime and fact_rankings tables.
     """
     dict_data = read_bronze_data(db_manager=db_manager, bronze_table=bronze_table)
     all_rows = extract_anime_records(dict_data)

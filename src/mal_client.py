@@ -2,14 +2,14 @@ import requests
 
 
 class MALClient:
-    """
-    Represents a client for interacting with the My Anime List API.
-    """
+    """Client for interacting with the MyAnimeList API."""
 
     def __init__(self, client_id: str, base_url: str):
-        """
-        Initializes a MALClient instance.
-        Initializes authentication headers for requests to the MAL API..
+        """Initialize a MALClient instance.
+
+        Args:
+            client_id: MAL API client ID used for authentication.
+            base_url: Base URL for MAL API requests.
         """
         self.client_id = client_id
         self.base_url = base_url
@@ -17,23 +17,28 @@ class MALClient:
         self.headers = {"X-MAL-CLIENT-ID": self.client_id}
 
     def get_seasonal_anime(self, year: int, season: str) -> requests.Response:
-        """
-        Gets and returns a response from MAL's seasonal anime endpoint for
-        a given year and season.
+        """Fetch seasonal anime data from the MyAnimeList API.
 
-        year: an integer e.g., 2009, 2021
-        season: "winter", "spring", "summer", "fall"
+        Args:
+            year: Year of the seasonal anime listing.
+            season: Season name, such as "winter", "spring", "summer", or "fall".
+
+        Returns:
+            requests.Response object from the MAL API.
         """
         endpoint = self.base_url + f"/season/{year}/{season}"
         response = requests.get(endpoint, headers=self.headers)
         return response
 
     def get_rankings(self, ranking_type: str, limit: int) -> requests.Response:
-        """
-        Gets and returns a response from MAL's ranking endpoint.
+        """Fetch ranking data from the MyAnimeList API.
 
-        ranking_type: the type of ranking requested(all, airing, etc)
-        limit: the number of anime to return (limit of 500)
+        Args:
+            ranking_type: Type of ranking to request, such as "all" or "airing".
+            limit: Maximum number of results to return.
+
+        Returns:
+            requests.Response object from the MAL API.
         """
         endpoint = self.base_url + f"/ranking?ranking_type={ranking_type}&limit={limit}"
         response = requests.get(endpoint, headers=self.headers)

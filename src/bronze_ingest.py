@@ -14,15 +14,18 @@ def bronze_ingest_rankings(
     ranking_type: str,
     limit: int,
 ) -> None:
-    """
-    Ingests anime ranking data from the MyAnimeList API into a Bronze table.
+    """Ingest anime ranking data from the MyAnimeList API into a Bronze table.
 
-    Retrieves anime ranking data, serializes the
-    raw API response to JSON, and appends it to the specified Bronze table along
-    with the current ingestion timestamp.
+    Args:
+        client: MALClient instance used to call the MAL API.
+        db_manager: DatabaseManager instance used to write data to DuckDB.
+        table_name: Name of the Bronze table to write raw payloads into.
+        ranking_type: Ranking type to request (for example, "all" or "airing").
+        limit: Number of anime records to request from the API.
 
-    ranking_type: the type of ranking requested(all, airing, etc)
-    limit: the number of anime to return (limit of 500)
+    Returns:
+        None. Writes the raw JSON payload and ingestion timestamp to the
+        specified Bronze table.
     """
     response = client.get_rankings(ranking_type, limit)
     data = response.json()
