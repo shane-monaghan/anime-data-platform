@@ -6,6 +6,8 @@ requires-python = ">=3.12"
 dependencies = [
     "duckdb",
     "polars",
+    "pyarrow>=25.0.1",
+    "python-dotenv>=1.2.2",
     "requests",
 ]
 
