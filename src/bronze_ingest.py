@@ -3,12 +3,16 @@ from datetime import datetime
 
 import polars as pl
 
-from mal_client import MALClient
 from database_manager import DatabaseManager
+from mal_client import MALClient
 
 
 def bronze_ingest_rankings(
-    client: MALClient, db_manager: DatabaseManager, table_name: str, ranking_type: str, limit: int
+    client: MALClient,
+    db_manager: DatabaseManager,
+    table_name: str,
+    ranking_type: str,
+    limit: int,
 ) -> None:
     """
     Ingests anime ranking data from the MyAnimeList API into a Bronze table.

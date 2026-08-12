@@ -18,7 +18,7 @@ class MALClient:
 
     def get_seasonal_anime(self, year: int, season: str) -> requests.Response:
         """
-        Gets and returns a response from MAL's seasonal anime endpoint for 
+        Gets and returns a response from MAL's seasonal anime endpoint for
         a given year and season.
 
         year: an integer e.g., 2009, 2021

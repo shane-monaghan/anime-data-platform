@@ -1,4 +1,3 @@
-import duckdb
 import polars as pl
 
 from database_manager import DatabaseManager
@@ -21,7 +20,11 @@ def read_bronze_data(db_manager: DatabaseManager, bronze_table: str) -> list[dic
     query = f"SELECT * FROM {bronze_table}"
     bronze_df = db_manager.execute(query).pl()
     dict_data = bronze_df["raw_json"].str.json_decode().to_list()
-    return dict_data
+
+    return [
+        {"data": response, "ingested_at": timestamp}
+        for response, timestamp in zip(dict_data, bronze_df["ingested_at"].to_list())
+    ]
 
 
 def extract_anime_records(responses: list[dict]) -> list[dict]:
@@ -38,9 +41,12 @@ def extract_anime_records(responses: list[dict]) -> list[dict]:
         Flattened list of anime ranking dictionaries.
     """
     all_rows = []
+
     for response in responses:
-        for anime_dict in response["data"]:
+        for anime_dict in response["data"]["data"]:
+            anime_dict["ingested_at"] = response["ingested_at"]
             all_rows.append(anime_dict)
+
     return all_rows
 
 
@@ -90,7 +96,7 @@ def create_fact_dataframe(parsed_df: pl.DataFrame) -> pl.DataFrame:
     Returns:
         DataFrame containing anime ranking records.
     """
-    fact_df = parsed_df.select("id", "rank")
+    fact_df = parsed_df.select("id", "rank", "ingested_at")
     return fact_df
 
 
@@ -115,5 +121,25 @@ def silver_transform(
     anime_dim_df = create_anime_dim_dataframe(parsed_df)
     fact_df = create_fact_dataframe(parsed_df)
 
-    db_manager.write("dim_anime", anime_dim_df)
-    db_manager.write("fact_rankings", fact_df)
+    db_manager.execute(
+        """
+            CREATE TABLE IF NOT EXISTS dim_anime (
+                id INTEGER PRIMARY KEY,
+                title VARCHAR
+            )
+        """
+    )
+
+    db_manager.execute(
+        """
+            CREATE TABLE IF NOT EXISTS fact_rankings (
+                id INTEGER,
+                rank INTEGER,
+                ingested_at TIMESTAMP,
+                PRIMARY KEY (id, ingested_at)
+            )
+        """
+    )
+
+    db_manager.write("dim_anime", anime_dim_df, conflict_columns=["id"])
+    db_manager.write("fact_rankings", fact_df, conflict_columns=["id", "ingested_at"])

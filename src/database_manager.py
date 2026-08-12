@@ -1,10 +1,13 @@
 import duckdb
 
+
 class DatabaseManager:
     """
-    This class creates a database manager in order to abstract away repetitive database operations
-    such as managing the connection, checking whether a table exists in DuckDB, appending to a table, etc. 
+    This class creates a database manager in order to abstract
+    away repetitive database operations such as managing the connection,
+    checking whether a table exists in DuckDB, appending to a table, etc.
     """
+
     def __init__(self, db_path):
         self.conn = duckdb.connect(db_path)
 
@@ -26,15 +29,20 @@ class DatabaseManager:
         query = f"CREATE TABLE IF NOT EXISTS {table_name} AS SELECT * FROM df"
         return self.conn.execute(query)
 
-    def append(self, table_name, df):
+    def append(self, table_name, df, conflict_columns=None):
         query = f"INSERT INTO {table_name} SELECT * FROM df"
+
+        if conflict_columns:
+            columns = ", ".join(conflict_columns)
+            query += f" ON CONFLICT ({columns}) DO NOTHING"
+
         return self.conn.execute(query)
 
-    def write(self, table_name, df):
+    def write(self, table_name, df, conflict_columns=None):
         if self.table_exists(table_name):
-            return self.append(table_name, df)
+            return self.append(table_name, df, conflict_columns=conflict_columns)
         else:
             return self.create_table(table_name, df)
-    
+
     def execute(self, query):
         return self.conn.execute(query)
